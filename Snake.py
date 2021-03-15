@@ -1,5 +1,6 @@
 import pygame
 from enum import Enum
+import random
 pygame.init()
 
 class Direction(Enum):
@@ -8,45 +9,119 @@ class Direction(Enum):
 	bottom=(0,1)
 	left=(-1,0)
 
-class HeadBlock:
-	def __init__(self,nxt,pos,direction):
-		self.pos=pos
-		self.direction=direction
-		self.nxt=nxt
+
+class SnakeBlock:
+	def __init__(self,pos):
+		self.pos=pos			
+	def draw(self,size):
+		pygame.draw.rect(WIN,(255,255,255),self.pos+size)
+	def move(self,new):
+		new=(new[0]%500,new[1]%500)
+		self.pos=new
+
+class FoodProducer:
+	producers=[]
+	def __init__(self,rect,size=10):
+		self.rect=rect
+		self.size=size
+		self.food=self.generateFood()
+		FoodProducer.producers.append(self)
+	def eaten(self):
+		del self.food
+		self.food=self.generateFood()
+	def generateFood(self):
+		ch=True
+		while ch:
+			foodx=random.randint(self.rect[0],self.rect[2])
+			foody=random.randint(self.rect[1],self.rect[3])
+			ch=False
+			for producer in FoodProducer.producers:
+				if producer is not self and producer.food.pos==(foodx*self.size,foody*self.size):
+					ch=True
+					break
+		food=FoodBlock((foodx*self.size,foody*self.size),(self.size,self.size),self)
+		return food
+	def draw(self):
+		self.food.draw()
 
 
-class BodyBlock:
-	def __init__(self,prev,nxt,pos):
-		self.pos=pos
-		self.prev=prev
-		self.nxt=nxt
 
-class TailBlock:
-	def __init__(self,prev,pos):
-		self.pos=pos
-		self.prev=prev
 
 class FoodBlock:
-	def __init__(self,pos):
+	def __init__(self,pos,size,producer):
 		self.pos=pos
+		self.size=size
+		self.producer=producer
+	def draw(self):
+		pygame.draw.rect(WIN,(200,0,0),self.pos+self.size)
 
 class Snake:
-	def __init__(self,pos,direction):
+	def __init__(self,pos,direction,size=10,control=(pygame.K_UP,pygame.K_RIGHT,pygame.K_DOWN,pygame.K_LEFT)):
 		self.pos=pos
 		self.direction=direction
+		self.size=(size,size)
+		self.parts=[]
+		self.head=SnakeBlock(pos)
+		dir_val=self.direction.value
+		tail_pos=tuple(p-size*d for p,d in zip(pos,dir_val))
+		tail=SnakeBlock(tail_pos)
+		self.parts.insert(0,tail)
+		self.goto=self.direction
+		self.control=control
+	def eventManager(self,keys):
+		for key in reversed(keys):
+			if key in self.control:
+				index=self.control.index(key)
+				if index==0 and self.direction!=Direction.bottom:self.direction=Direction.top
+				elif index==1 and self.direction!=Direction.left:self.direction=Direction.right
+				elif index==2 and self.direction!=Direction.top:self.direction=Direction.bottom
+				elif index==3 and self.direction!=Direction.right:self.direction=Direction.left
+				break
+	def move(self,tickc):
+		for producer in FoodProducer.producers:
+			if producer.food.pos==self.head.pos:
+				producer.eaten()
+				self.parts.append(SnakeBlock((self.parts[-1].pos)))
+		if tickc == 0:
+			prev_pos=self.head.pos
+			new_pos=tuple(h+self.size[0]*d for h,d in zip(prev_pos,self.direction.value))
+			self.head.move(new_pos)
+			for block in self.parts:
+				p_pos=block.pos
+				block.move(prev_pos)
+				prev_pos=p_pos
+	def draw(self):
+		self.head.draw(self.size)
+		for part in self.parts:
+			part.draw(self.size)
+
 
 
 
 WIN=pygame.display.set_mode((500,500))
 pygame.display.set_caption("Snake")
 CLOCK=pygame.time.Clock()
+tickc=-1
 
+player=Snake((50,50),Direction.right)
+FoodProducer((0,0,49,49))
 run=True
 while run:
 	CLOCK.tick(64)
-	for event in pygame.event.get():
-		if event.type==pygame.QUIT:
-			run=False
-		elif event.type==pygame.KEYDOWN:
-			
+	tickc+=1
+	tickc%=10
+	if tickc==0:
+		keys=[]
+		for event in pygame.event.get():
+			if event.type==pygame.QUIT:
+				run=False
+			elif event.type==pygame.KEYDOWN:
+				keys.append(event.key)
+		player.eventManager(keys)
+	WIN.fill((0,0,0))
+	player.draw()
+	for producer in FoodProducer.producers:
+		producer.draw()
+	player.move(tickc)
+	pygame.display.update()
 
