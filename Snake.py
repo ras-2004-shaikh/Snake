@@ -68,6 +68,7 @@ class Snake:
 		self.parts.insert(0,tail)
 		self.goto=self.direction
 		self.control=control
+		self.killed=False
 	def eventManager(self,keys):
 		for key in reversed(keys):
 			if key in self.control:
@@ -85,15 +86,19 @@ class Snake:
 		if tickc == 0:
 			prev_pos=self.head.pos
 			new_pos=tuple(h+self.size[0]*d for h,d in zip(prev_pos,self.direction.value))
+			for part in self.parts[:-1]:
+				if new_pos== part.pos:
+					self.killed=True
 			self.head.move(new_pos)
 			for block in self.parts:
 				p_pos=block.pos
 				block.move(prev_pos)
 				prev_pos=p_pos
 	def draw(self):
-		self.head.draw(self.size)
-		for part in self.parts:
-			part.draw(self.size)
+		if not self.killed:
+			self.head.draw(self.size)
+			for part in self.parts:
+				part.draw(self.size)
 
 
 
