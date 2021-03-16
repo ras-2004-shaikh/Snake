@@ -39,6 +39,12 @@ class FoodProducer:
 				if producer is not self and producer.food.pos==(foodx*self.size,foody*self.size):
 					ch=True
 					break
+			for player in players:
+				for part in player.parts:
+					if part.pos==(foodx*self.size,foody*self.size):
+						ch=True
+						break
+				if ch:break
 		food=FoodBlock((foodx*self.size,foody*self.size),(self.size,self.size),self)
 		return food
 	def draw(self):
@@ -69,25 +75,24 @@ class Snake:
 		self.goto=self.direction
 		self.control=control
 		self.killed=False
-	def eventManager(self,keys):
-		for key in reversed(keys):
-			if key in self.control:
-				index=self.control.index(key)
-				if index==0 and self.direction!=Direction.bottom:self.direction=Direction.top
-				elif index==1 and self.direction!=Direction.left:self.direction=Direction.right
-				elif index==2 and self.direction!=Direction.top:self.direction=Direction.bottom
-				elif index==3 and self.direction!=Direction.right:self.direction=Direction.left
-				break
+	def eventManager(self,key):
+		if key in self.control:
+			index=self.control.index(key)
+			if index==0 and self.direction!=Direction.bottom:self.direction=Direction.top
+			elif index==1 and self.direction!=Direction.left:self.direction=Direction.right
+			elif index==2 and self.direction!=Direction.top:self.direction=Direction.bottom
+			elif index==3 and self.direction!=Direction.right:self.direction=Direction.left
 	def move(self,tickc):
 		for producer in FoodProducer.producers:
 			if producer.food.pos==self.head.pos:
 				producer.eaten()
-				self.parts.append(SnakeBlock((self.parts[-1].pos)))
+				for i in range(10):
+					self.parts.append(SnakeBlock((self.parts[-1].pos)))
 		if tickc == 0:
 			prev_pos=self.head.pos
-			new_pos=tuple(h+self.size[0]*d for h,d in zip(prev_pos,self.direction.value))
+			new_pos=tuple((h+self.size[0]*d)%500 for h,d in zip(prev_pos,self.direction.value))
 			for part in self.parts[:-1]:
-				if new_pos== part.pos:
+				if new_pos==part.pos:
 					self.killed=True
 			self.head.move(new_pos)
 			for block in self.parts:
@@ -108,21 +113,22 @@ pygame.display.set_caption("Snake")
 CLOCK=pygame.time.Clock()
 tickc=-1
 
-player=Snake((50,50),Direction.right)
-FoodProducer((0,0,49,49))
+player=Snake((60,60),Direction.right,size=20)
+players=[player]
+FoodProducer((0,0,24,24),size=20)
 run=True
+key_events=[]
 while run:
 	CLOCK.tick(64)
 	tickc+=1
-	tickc%=10
-	if tickc==0:
-		keys=[]
-		for event in pygame.event.get():
-			if event.type==pygame.QUIT:
-				run=False
-			elif event.type==pygame.KEYDOWN:
-				keys.append(event.key)
-		player.eventManager(keys)
+	tickc%=7
+	for event in pygame.event.get():
+		if event.type==pygame.QUIT:
+			run=False
+		elif event.type==pygame.KEYDOWN:
+			key_events.append(event.key)
+	if tickc==0 and key_events:
+		player.eventManager(key_events.pop(0))
 	WIN.fill((0,0,0))
 	player.draw()
 	for producer in FoodProducer.producers:
