@@ -86,8 +86,7 @@ class Snake:
 		for producer in FoodProducer.producers:
 			if producer.food.pos==self.head.pos:
 				producer.eaten()
-				for i in range(10):
-					self.parts.append(SnakeBlock((self.parts[-1].pos)))
+				self.parts.append(SnakeBlock((self.parts[-1].pos)))
 		if tickc == 0:
 			prev_pos=self.head.pos
 			new_pos=tuple((h+self.size[0]*d)%500 for h,d in zip(prev_pos,self.direction.value))
